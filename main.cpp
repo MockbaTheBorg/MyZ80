@@ -9,6 +9,7 @@ typedef uint8_t Byte;
 typedef uint16_t Word;
 typedef uint8_t Reg8;
 typedef uint16_t Reg16;
+typedef uint32_t Reg32;
 
 #define RAMSIZE 65536
 
@@ -170,6 +171,41 @@ static const Byte parityTable[256] = {
 	4,0,0,4,0,4,4,0,0,4,4,0,4,0,0,4,
 };
 
+// Table for getting the flags of 16 bits math
+static const Byte cbitsTable[512] = {
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,17,
+};
 
 // Memory manipulation functions
 // (Must be different for hardware based emulation)
@@ -183,42 +219,46 @@ void Write8(Word Addr, Byte Value) {
 
 Word Fetch16(Word Addr) {
 #ifdef BIG_ENDIAN
-	return((Ram[Addr] << 8) + Ram[Addr + 1]);
-#else
 	return((Ram[Addr + 1] << 8) + Ram[Addr]);
+#else
+	return((Ram[Addr] << 8) + Ram[Addr + 1]);
 #endif
 }
 
 void Write16(Word Addr, Word Value) {
 #ifdef BIG_ENDIAN
-	Ram[Addr] = (Value & 0xff);
-	Ram[Addr + 1] = ((Value >> 8) & 0xff);
-#else
 	Ram[Addr + 1] = (Value & 0xff);
 	Ram[Addr] = ((Value >> 8) & 0xff);
+#else
+	Ram[Addr] = (Value & 0xff);
+	Ram[Addr + 1] = ((Value >> 8) & 0xff);
 #endif
 }
 
 void TestLoad(void) {	// Loads the memory with a small test application
 	int i = 0;
 
-	Ram[i++] = 0x00;	// NOP
+//	Ram[i++] = 0x00;	// NOP
 	Ram[i++] = 0x01;	// LD BC, 0x0F29
 	Ram[i++] = 0x29;
 	Ram[i++] = 0x0F;
-	Ram[i++] = 0x02;	// LD (BC), A
-	Ram[i++] = 0x03;	// INC BC
-	Ram[i++] = 0x04;	// INC B
-	Ram[i++] = 0x05;	// DEC B
-	Ram[i++] = 0x06;	// LD B, 0x7F
-	Ram[i++] = 0x7F;
-	Ram[i++] = 0x06;	// LD B, 0x00
+//	Ram[i++] = 0x02;	// LD (BC), A
+//	Ram[i++] = 0x03;	// INC BC
+//	Ram[i++] = 0x04;	// INC B
+//	Ram[i++] = 0x05;	// DEC B
+//	Ram[i++] = 0x06;	// LD B, 0x7F
+//	Ram[i++] = 0x7F;
+//	Ram[i++] = 0x06;	// LD B, 0x00
+//	Ram[i++] = 0x00;
+//	Ram[i++] = 0x0E;	// LD C, 0x03
+//	Ram[i++] = 0x03;
+//	Ram[i++] = 0x08;	// EX AF, AF'
+//	Ram[i++] = 0x10;	// DJNZ, -2
+//	Ram[i++] = 0xFE;
+	Ram[i++] = 0x21;	// LD HL, 0x0200
 	Ram[i++] = 0x00;
-	Ram[i++] = 0x0E;	// LD C, 0x03
-	Ram[i++] = 0x03;
-	Ram[i++] = 0x08;	// EX AF, AF'
-	Ram[i++] = 0x10;	// DJNZ, -2
-	Ram[i++] = 0xFE;
+	Ram[i++] = 0x02;
+	Ram[i++] = 0x09;	// ADD HL, BC
 	Ram[i++] = 0x76;	// HLT
 
 }
@@ -255,7 +295,7 @@ void Z80Reset(void) {	// Resets all Z80 registers (and other stuff) to their ini
 	}
 }
 
-Byte Z80RunCB(void) {	// Executes the CB prefix instruction
+Byte Z80DecodeCB(void) {	// Decodes and executes the CB prefix instruction
 	Byte Result = 0;
 	Byte x, y, z, p, q;
 	Reg8 Tmp8;
@@ -283,11 +323,60 @@ Byte Z80RunCB(void) {	// Executes the CB prefix instruction
 	return(Result);
 }
 
-Byte Z80Run(void) {		// Executes the instruction pointed at by PC
+Byte Z80DecodeDD(void) {	// Decodes and executes the CB prefix instruction
 	Byte Result = 0;
 	Byte x, y, z, p, q;
 	Reg8 Tmp8;
 	Reg16 Tmp16;
+
+	Instr = Fetch8(PC++);
+	x = GetX(Instr);
+	y = GetY(Instr);
+	z = GetZ(Instr);
+	p = GetP(Instr);
+	q = GetQ(Instr);
+
+	return(Result);
+}
+
+Byte Z80DecodeED(void) {	// Decodes and executes the CB prefix instruction
+	Byte Result = 0;
+	Byte x, y, z, p, q;
+	Reg8 Tmp8;
+	Reg16 Tmp16;
+
+	Instr = Fetch8(PC++);
+	x = GetX(Instr);
+	y = GetY(Instr);
+	z = GetZ(Instr);
+	p = GetP(Instr);
+	q = GetQ(Instr);
+
+	return(Result);
+}
+
+Byte Z80DecodeFD(void) {	// Decodes and executes the CB prefix instruction
+	Byte Result = 0;
+	Byte x, y, z, p, q;
+	Reg8 Tmp8;
+	Reg16 Tmp16;
+
+	Instr = Fetch8(PC++);
+	x = GetX(Instr);
+	y = GetY(Instr);
+	z = GetZ(Instr);
+	p = GetP(Instr);
+	q = GetQ(Instr);
+
+	return(Result);
+}
+
+Byte Z80Decode(void) {		// Decodes and executes the instruction pointed at by PC
+	Byte Result = 0;
+	Byte x, y, z, p, q;
+	Reg8 Tmp8;
+	Reg16 Tmp16;
+	Reg32 Tmp32;
 
 	if (Clock) {
 		Instr = Fetch8(PC++);
@@ -342,7 +431,9 @@ Byte Z80Run(void) {		// Executes the instruction pointed at by PC
 					*rp[p] = Tmp16;
 				}
 				if (q == 1) {			// ADD HL, rp[p]
-					HL += *rp[p];
+					Tmp32 = HL + *rp[p];
+					F = (F & ~0x3b) | ((Tmp32 >> 8) & 0x28) | cbitsTable[(HL ^ *rp[p] ^ Tmp32) >> 8];
+					HL = Tmp32;
 				}
 			}
 			if (z == 2) {
@@ -513,7 +604,7 @@ Byte Z80Run(void) {		// Executes the instruction pointed at by PC
 
 				}
 				if (y == 1) {			// (CB prefix)
-					Z80RunCB();
+					Z80DecodeCB();
 				}
 				if (y == 2) {			// OUT (n), A
 
@@ -545,13 +636,13 @@ Byte Z80Run(void) {		// Executes the instruction pointed at by PC
 
 					}
 					if (p == 1) {		// (DD prefix)
-
+						Z80DecodeDD();
 					}
 					if (p == 2) {		// (ED prefix)
-
+						Z80DecodeED();
 					}
 					if (p == 3) {		// (FD prefix)
-
+						Z80DecodeFD();
 					}
 				}
 				if (z == 6) {			// alu[y] n
@@ -576,7 +667,7 @@ int main(void) {
 
 	Z80Reset();
 	while (true) {
-		if (Z80Run()) {
+		if (Z80Decode()) {
 			break;
 		}
 	}
