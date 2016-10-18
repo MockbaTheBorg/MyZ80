@@ -1,4 +1,4 @@
-## MyZ80 - Yet another Z80 emulator
+## MyZ80 - Mockba's yet another Z80 emulator
 
 This is a project I am writing with the intent to have a Z80 emulator code on my RunCPM and at the same time use the same code as a model on Proteus.
 
